@@ -1,49 +1,16 @@
-import ccxt
-from dotenv import load_dotenv
-import os
-import pandas as pd
 from tqdm import tqdm
+from util import ChartUtils
+from calculate import TechnicalIndicators
+from data import MarketData
+from core import TradingCore
+from dotenv import load_dotenv
 
+import ccxt
+import matplotlib.pyplot as plt
+import os
+import shutil
+import pandas as pd
 
-def calculate_bollinger_bands(df, window=20, num_of_std=2):
-    rolling_mean = df['close'].rolling(window=window).mean()
-    rolling_std = df['close'].rolling(window=window).std()
-    upper_band = rolling_mean + (rolling_std * num_of_std)
-    lower_band = rolling_mean - (rolling_std * num_of_std)
-    return upper_band, lower_band
-
-
-def fetch_coins_data(exchange, symbols, timeframe, limit):
-    coins_data = {}
-    # 모든 시장 데이터 로드
-    markets = exchange.load_markets()
-    for symbol in tqdm(symbols):
-        if symbol.endswith('/USDT') and symbol in markets:  # USDT 마켓이며 사용 가능한 심볼만 고려
-            try:
-                ohlcv = exchange.fetch_ohlcv(symbol, timeframe, limit=limit)
-                df = pd.DataFrame(ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
-                coins_data[symbol] = df
-            except Exception as e:
-                pass
-                # print(f"Error fetching data for {symbol}: {str(e)}")
-    return coins_data
-
-
-def find_bollinger_extremes(exchange, symbols, timeframe='1h', limit=100, window=20, num_of_std=3):
-    coins_data = fetch_coins_data(exchange, symbols, timeframe, limit)
-    extreme_signals = []
-
-    for symbol, df in coins_data.items():
-        upper_band, lower_band = calculate_bollinger_bands(df, window, num_of_std)
-        df['upper_band'] = upper_band
-        df['lower_band'] = lower_band
-
-        if df['close'].iloc[-1] > df['upper_band'].iloc[-1]:
-            extreme_signals.append((symbol, 'Above Upper Band'))
-        elif df['close'].iloc[-1] < df['lower_band'].iloc[-1]:
-            extreme_signals.append((symbol, 'Below Lower Band'))
-
-    return extreme_signals
 
 def main():
     # 사용자가 원하는 시간봉 입력
@@ -92,15 +59,32 @@ def main():
             print("")
 
     # 이 시점에서 'timeframe' 변수는 유효한 값을 가짐
-    print(f"You have selected the timeframe: {timeframe}")  
+    print(f"You have selected the timeframe: {timeframe}")
+    limit = ChartUtils.calculate_limit(timeframe)  # 입력된 시간봉에 따른 limit 계산
+    ChartUtils.initialize_chart_folder()
     exchange.load_markets()
     symbols = exchange.symbols
-    extreme_signals = find_bollinger_extremes(exchange, symbols, timeframe)
-    
-    if extreme_signals:
+    coins_data = MarketData.fetch_coins_data(exchange, symbols, timeframe, limit)
+    extreme_bb_signals = TradingCore.find_bollinger_extremes(coins_data)
+    extreme_rsi_signals = TradingCore.find_extreme_rsi(coins_data)
+
+    if extreme_bb_signals:
         print("\nCoins with extreme Bollinger Band values:")
-        for symbol, position in extreme_signals:
+        for symbol, position in extreme_bb_signals:
             print(f"{symbol} is {position}")
+            # 데이터 프레임을 가져오고, 볼린저 밴드를 계산합니다.
+            data = coins_data[symbol]
+            # 기술적 지표 (SMA와 RSI)를 계산하고 데이터프레임에 추가합니다.
+            data = TechnicalIndicators.add_technical_indicators(data)
+            # 볼린저 밴드를 계산합니다.
+            data['upper_band'], data['lower_band'] = TechnicalIndicators.calculate_bollinger_bands(data)
+            # 차트를 저장합니다.
+            ChartUtils.save_chart(data, symbol, timeframe)
+    if extreme_rsi_signals:
+        print("\nCoins with extreme RSI values:")
+        for symbol, status, rsi_value in extreme_rsi_signals:
+            print(f"{symbol} is {status} (RSI: {rsi_value:.2f})")
+
     else:
         print("\nNo coins with extreme Bollinger Band values at this time.")
 
