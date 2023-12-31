@@ -52,7 +52,7 @@ class ChartUtils:
                 mpf.make_addplot(rsi, panel=1, color='purple', ylabel='RSI', label='RSI')]
 
         # 캔들스틱 차트와 추가 플롯 그리기
-        mpf.plot(ohlcv, type='candle', style='yahoo', addplot=apds, title=f'{symbol} {timeframe}', 
+        mpf.plot(ohlcv, type='line', style='yahoo', addplot=apds, title=f'{symbol} {timeframe}', 
                 figratio=(10, 8), volume=True, panel_ratios=(6,3))
 
         # 폴더 확인 및 생성
@@ -61,5 +61,27 @@ class ChartUtils:
 
         # 차트 저장
         chart_filename = f'charts/{symbol.replace("/", "_")}_{timeframe}.png'
+        plt.savefig(chart_filename)
+        plt.close()
+
+    @staticmethod
+    def save_ichimoku_chart(data, symbol, timeframe):
+        # Ichimoku Cloud 구성 요소를 사용하여 추가 플롯 설정
+        apds = [mpf.make_addplot(data['tenkan_sen'], color='blue', width=0.7, label='Tenkan Sen'),
+                mpf.make_addplot(data['kijun_sen'], color='red', width=0.7, label='Kijun Sen'),
+                mpf.make_addplot(data['senkou_span_a'], color='green', width=0.7, label='Senkou Span A', alpha=0.3),
+                mpf.make_addplot(data['senkou_span_b'], color='orange', width=0.7, label='Senkou Span B', alpha=0.3),
+                mpf.make_addplot(data['chikou_span'], color='purple', width=0.7, label='Chikou Span')]
+
+        # 캔들스틱 차트와 Ichimoku Cloud 그리기
+        mpf.plot(data, type='candle', style='yahoo', addplot=apds, title=f'{symbol} Ichimoku Chart {timeframe}', 
+                figratio=(10, 8), volume=True)
+
+        # 차트 저장 폴더 확인 및 생성
+        if not os.path.isdir('charts'):
+            os.mkdir('charts')
+
+        # Ichimoku 차트 저장
+        chart_filename = f'charts/{symbol.replace("/", "_")}_ichimoku_{timeframe}.png'
         plt.savefig(chart_filename)
         plt.close()
