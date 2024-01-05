@@ -17,6 +17,11 @@ class Analysis:
     def analyze_all_timeframes(self):
         # 전체 시간봉을 탐색하는 로직
         print("Analyzing all timeframes...")
+        result = {
+            'common_bb_symbols': [], 
+            'common_rsi_symbols': [], 
+            'intersected_symbols': []  # 공통된 코인을 저장할 리스트
+        }
         symbols = self.exchange.get_symbols()
         extreme_signals_per_timeframe = {
         timeframe: {'bb': set(), 'rsi': set()} for timeframe in self.timeframe_options
@@ -36,6 +41,9 @@ class Analysis:
         # 공통 신호 찾기
         common_bb_symbols = set.intersection(*[signals['bb'] for signals in extreme_signals_per_timeframe.values()])
         common_rsi_symbols = set.intersection(*[signals['rsi'] for signals in extreme_signals_per_timeframe.values()])
+        # 공통된 요소 찾기
+        intersected_symbols = common_bb_symbols.intersection(common_rsi_symbols)
+
 
         # 공통 볼린저 밴드 신호 코인에 대한 차트 저장
         if common_bb_symbols:
@@ -44,6 +52,12 @@ class Analysis:
                 data = TechnicalIndicators.add_technical_indicators(data)
                 data['upper_band'], data['lower_band'] = TechnicalIndicators.calculate_bollinger_bands(data)
                 ChartUtils.save_chart(data, symbol, "common")
+                result.update({
+                'common_bb_symbols': list(common_bb_symbols),
+                'common_rsi_symbols': list(common_rsi_symbols),
+                'intersected_symbols': list(intersected_symbols)  # 공통된 코인 리스트 추가
+            })
+                return result
         else:
             print("No common Bollinger Band signals found across timeframes.")
 
@@ -84,3 +98,4 @@ class Analysis:
                 break
             else:
                 print("Invalid input. Please enter a valid number for the timeframe.")
+

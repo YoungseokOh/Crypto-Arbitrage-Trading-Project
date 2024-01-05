@@ -9,7 +9,8 @@ class Exchange:
         self.api_key = os.getenv('BINANCE_API_KEY')
         self.api_secret = os.getenv('BINANCE_API_SECRET')
         self.exchange = self.connect()
-
+        
+        
     def connect(self):
         exchange = ccxt.binance({
             'apiKey': self.api_key,
