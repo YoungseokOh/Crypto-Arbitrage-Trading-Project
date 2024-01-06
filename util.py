@@ -85,3 +85,9 @@ class ChartUtils:
         chart_filename = f'charts/{symbol.replace("/", "_")}_ichimoku_{timeframe}.png'
         plt.savefig(chart_filename)
         plt.close()
+
+    @staticmethod
+    def remove_suffix_from_symbols(symbols, suffix=':USDT'):
+        """주어진 심볼 목록에서 특정 접미사를 제거합니다."""
+        processed_symbols = [symbol.replace(suffix, '') for symbol in symbols]
+        return processed_symbols

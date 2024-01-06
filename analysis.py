@@ -44,18 +44,21 @@ class Analysis:
         # 공통된 요소 찾기
         intersected_symbols = common_bb_symbols.intersection(common_rsi_symbols)
 
-
         # 공통 볼린저 밴드 신호 코인에 대한 차트 저장
         if common_bb_symbols:
+            processed_bb_symbols = ChartUtils.remove_suffix_from_symbols(common_bb_symbols)
+            processed_rsi_symbols = ChartUtils.remove_suffix_from_symbols(common_rsi_symbols)
+            processed_intersected_symbols = ChartUtils.remove_suffix_from_symbols(intersected_symbols)
+
             for symbol in common_bb_symbols:
                 data = coins_data[symbol]
                 data = TechnicalIndicators.add_technical_indicators(data)
                 data['upper_band'], data['lower_band'] = TechnicalIndicators.calculate_bollinger_bands(data)
                 ChartUtils.save_chart(data, symbol, "common")
                 result.update({
-                'common_bb_symbols': list(common_bb_symbols),
-                'common_rsi_symbols': list(common_rsi_symbols),
-                'intersected_symbols': list(intersected_symbols)  # 공통된 코인 리스트 추가
+                'common_bb_symbols': list(processed_bb_symbols),
+                'common_rsi_symbols': list(processed_rsi_symbols),
+                'intersected_symbols': list(processed_intersected_symbols)  # 공통된 코인 리스트 추가
             })
                 return result
         else:
