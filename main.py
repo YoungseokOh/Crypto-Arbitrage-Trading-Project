@@ -7,6 +7,10 @@ def main():
     ChartUtils.initialize_chart_folder()
     exchange = Exchange()
     analysis = Analysis(exchange)
+    analysis_functions = {
+            'all_timeframes': analysis.analyze_all_timeframes,
+            'top_coins': analysis.analyze_top_coins
+            }
     # 선물 계좌 잔고 조회
     exchange.print_balance()
 
@@ -25,7 +29,7 @@ def main():
             break
         elif mode == '3':
             from telegram import run_telegram_bot
-            run_telegram_bot(analysis_function=analysis.analyze_all_timeframes)
+            run_telegram_bot(analysis_functions)
             break
         else:
             print("Invalid input. Please enter 1 or 2.")

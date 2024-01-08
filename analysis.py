@@ -14,6 +14,29 @@ class Analysis:
         self.exchange = exchange
         self.timeframe_options = ['1h', '2h', '4h', '6h', '8h', '12h']
 
+    
+    def fetch_top_gainers_and_losers(self):
+    # Binance 선물 시장의 모든 코인에 대한 티커 정보를 가져옵니다.
+        tickers = self.exchange.exchange.fetch_tickers()
+        futures_tickers = {symbol: ticker for symbol, ticker in tickers.items() if symbol.endswith('USDT')}
+
+        # 가격 변동률을 기준으로 정렬하여 상위 5개와 하위 5개 코인을 추출합니다.
+        sorted_tickers = sorted(futures_tickers.items(), key=lambda x: x[1]['percentage'], reverse=True)
+        top_5_gainers = sorted_tickers[:5]
+        top_5_losers = sorted_tickers[-5:]
+
+        # 결과를 딕셔너리로 반환합니다.
+        return {
+                'gainers': [{'symbol': symbol.replace(':USDT', ''), 'change': ticker['percentage']} for symbol, ticker in top_5_gainers],
+                'losers': [{'symbol': symbol.replace(':USDT', ''), 'change': ticker['percentage']} for symbol, ticker in top_5_losers]
+                }   
+
+
+    def analyze_top_coins(self):
+        top_gainers = self.fetch_top_gainers_and_losers()
+        return top_gainers
+
+
     def analyze_all_timeframes(self):
         # 전체 시간봉을 탐색하는 로직
         print("Analyzing all timeframes...")
@@ -101,4 +124,4 @@ class Analysis:
                 break
             else:
                 print("Invalid input. Please enter a valid number for the timeframe.")
-
+                
