@@ -14,7 +14,6 @@ class Analysis:
         self.exchange = exchange
         self.timeframe_options = ['1h', '2h', '4h', '6h', '8h', '12h']
 
-    
     def fetch_top_gainers_and_losers(self):
     # Binance 선물 시장의 모든 코인에 대한 티커 정보를 가져옵니다.
         tickers = self.exchange.exchange.fetch_tickers()
@@ -31,11 +30,9 @@ class Analysis:
                 'losers': [{'symbol': symbol.replace(':USDT', ''), 'change': ticker['percentage']} for symbol, ticker in top_5_losers]
                 }   
 
-
     def analyze_top_coins(self):
         top_gainers = self.fetch_top_gainers_and_losers()
         return top_gainers
-
 
     def analyze_all_timeframes(self):
         # 전체 시간봉을 탐색하는 로직
