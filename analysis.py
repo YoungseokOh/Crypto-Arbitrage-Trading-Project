@@ -6,7 +6,9 @@ from calculate import TechnicalIndicators
 from data import MarketData
 from core import TradingCore
 import os
+import time
 import pandas as pd
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 class Analysis:
@@ -15,24 +17,52 @@ class Analysis:
         self.timeframe_options = ['1h', '2h', '4h', '6h', '8h', '12h']
 
     def fetch_top_gainers_and_losers(self):
-    # Binance 선물 시장의 모든 코인에 대한 티커 정보를 가져옵니다.
         tickers = self.exchange.exchange.fetch_tickers()
         futures_tickers = {symbol: ticker for symbol, ticker in tickers.items() if symbol.endswith('USDT')}
 
-        # 가격 변동률을 기준으로 정렬하여 상위 5개와 하위 5개 코인을 추출합니다.
         sorted_tickers = sorted(futures_tickers.items(), key=lambda x: x[1]['percentage'], reverse=True)
         top_5_gainers = sorted_tickers[:5]
         top_5_losers = sorted_tickers[-5:]
 
-        # 결과를 딕셔너리로 반환합니다.
+        # 상위 및 하위 5개 코인의 funding fee 가져오기
+        gainers_with_fee = []
+        for symbol, ticker in top_5_gainers:
+            funding_rate = self.exchange.fetch_funding_rate(symbol)
+            gainers_with_fee.append({
+                'symbol': symbol.replace(':USDT', ''),
+                'change': ticker['percentage'],
+                'funding_rate': funding_rate
+            })
+
+        losers_with_fee = []
+        for symbol, ticker in top_5_losers:
+            funding_rate = self.exchange.fetch_funding_rate(symbol)
+            losers_with_fee.append({
+                'symbol': symbol.replace(':USDT', ''),
+                'change': ticker['percentage'],
+                'funding_rate': funding_rate
+            })
+
         return {
-                'gainers': [{'symbol': symbol.replace(':USDT', ''), 'change': ticker['percentage']} for symbol, ticker in top_5_gainers],
-                'losers': [{'symbol': symbol.replace(':USDT', ''), 'change': ticker['percentage']} for symbol, ticker in top_5_losers]
-                }   
+            'gainers': gainers_with_fee,
+            'losers': losers_with_fee
+        }
 
     def analyze_top_coins(self):
         top_gainers = self.fetch_top_gainers_and_losers()
         return top_gainers
+
+    def process_timeframe(self, timeframe, symbols):
+        limit = ChartUtils.calculate_limit(timeframe)
+        coins_data = MarketData.fetch_coins_data(self.exchange.exchange, symbols, timeframe, limit)
+        extreme_bb_signals = TradingCore.find_bollinger_extremes(coins_data)
+        extreme_rsi_signals = TradingCore.find_extreme_rsi(coins_data)
+
+        # 각 시간대별 신호 추출
+        bb_symbols = {symbol for symbol, _ in extreme_bb_signals}
+        rsi_symbols = {symbol for symbol, _, _ in extreme_rsi_signals}
+        # 데이터와 신호들 반환
+        return (coins_data, bb_symbols, rsi_symbols)
 
     def analyze_all_timeframes(self):
         # 전체 시간봉을 탐색하는 로직
@@ -40,50 +70,78 @@ class Analysis:
         result = {
             'common_bb_symbols': [], 
             'common_rsi_symbols': [], 
-            'intersected_symbols': []  # 공통된 코인을 저장할 리스트
+            'intersected_symbols': [], # 공통된 코인을 저장할 리스트
+            'funding_rates': {}  # 코인별 funding fee 정보를 저장할 딕셔너리
         }
         symbols = self.exchange.get_symbols()
         extreme_signals_per_timeframe = {
         timeframe: {'bb': set(), 'rsi': set()} for timeframe in self.timeframe_options
         }
-        for timeframe in tqdm(self.timeframe_options):
-        # 이 시점에서 'timeframe' 변수는 유효한 값을 가짐
-            limit = ChartUtils.calculate_limit(timeframe)  # 입력된 시간봉에 따른 limit 계산
-            coins_data = MarketData.fetch_coins_data(self.exchange.exchange, symbols, timeframe, limit)
-            extreme_bb_signals = TradingCore.find_bollinger_extremes(coins_data)
-            extreme_rsi_signals = TradingCore.find_extreme_rsi(coins_data)
+        all_coins_data = {}
+        start_time = time.time()  # 시작 시간 기록
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            # 각 timeframe에 대한 작업을 병렬로 수행
+            futures = {executor.submit(self.process_timeframe, timeframe, symbols): 
+                       timeframe for timeframe in self.timeframe_options}
+            for future in as_completed(futures):
+                result_list = future.result()
+                # 리스트에서 데이터 추출
+                timeframe_data = result_list[0]
+                bb_signals = result_list[1]
+                rsi_signals = result_list[2]
+                timeframe = futures[future]
+                all_coins_data[timeframe] = timeframe_data
 
-            # 각 시간대별 신호 저장
-            for symbol, _ in extreme_bb_signals:
-                extreme_signals_per_timeframe[timeframe]['bb'].add(symbol)
-            for symbol, _, _ in extreme_rsi_signals:
-                extreme_signals_per_timeframe[timeframe]['rsi'].add(symbol)
-        # 공통 신호 찾기
+                # 각 시간대별 신호 저장
+                extreme_signals_per_timeframe[timeframe]['bb'].update(bb_signals)
+                extreme_signals_per_timeframe[timeframe]['rsi'].update(rsi_signals)
+        end_time = time.time()  # 종료 시간 기록
+        total_time = end_time - start_time  # 전체 실행 시간 계산
+        print(f"Total execution time: {total_time:.2f} seconds")  # 전체 실행 시간 출력
+
+            # for timeframe in tqdm(self.timeframe_options):
+            # # 이 시점에서 'timeframe' 변수는 유효한 값을 가짐
+            #     limit = ChartUtils.calculate_limit(timeframe)  # 입력된 시간봉에 따른 limit 계산
+            #     coins_data = MarketData.fetch_coins_data(self.exchange.exchange, symbols, timeframe, limit)
+            #     extreme_bb_signals = TradingCore.find_bollinger_extremes(coins_data)
+            #     extreme_rsi_signals = TradingCore.find_extreme_rsi(coins_data)
+
+            #     # 각 시간대별 신호 저장
+            #     for symbol, _ in extreme_bb_signals:
+            #         extreme_signals_per_timeframe[timeframe]['bb'].add(symbol)
+            #     for symbol, _, _ in extreme_rsi_signals:
+            #         extreme_signals_per_timeframe[timeframe]['rsi'].add(symbol)
+
         common_bb_symbols = set.intersection(*[signals['bb'] for signals in extreme_signals_per_timeframe.values()])
         common_rsi_symbols = set.intersection(*[signals['rsi'] for signals in extreme_signals_per_timeframe.values()])
-        # 공통된 요소 찾기
         intersected_symbols = common_bb_symbols.intersection(common_rsi_symbols)
 
-        # 공통 볼린저 밴드 신호 코인에 대한 차트 저장
         if common_bb_symbols:
             processed_bb_symbols = ChartUtils.remove_suffix_from_symbols(common_bb_symbols)
             processed_rsi_symbols = ChartUtils.remove_suffix_from_symbols(common_rsi_symbols)
             processed_intersected_symbols = ChartUtils.remove_suffix_from_symbols(intersected_symbols)
 
             for symbol in common_bb_symbols:
-                data = coins_data[symbol]
-                data = TechnicalIndicators.add_technical_indicators(data)
+                # data = futures.coins_data[symbol]
+                data = [all_coins_data[tf][symbol] for tf in self.timeframe_options if symbol in all_coins_data[tf]]
+                # 단일로 처리해야함..
+                # 몇시간 봉을 보여줄 것인가?
+                # 이미지를 한번에 합쳐서 보여주는건...?
+                data = TechnicalIndicators.add_technical_indicators(data[0])
                 data['upper_band'], data['lower_band'] = TechnicalIndicators.calculate_bollinger_bands(data)
                 ChartUtils.save_chart(data, symbol, "common")
-                result.update({
-                'common_bb_symbols': list(processed_bb_symbols),
-                'common_rsi_symbols': list(processed_rsi_symbols),
-                'intersected_symbols': list(processed_intersected_symbols)  # 공통된 코인 리스트 추가
-            })
-                return result
+                funding_rate = self.exchange.fetch_funding_rate(symbol)
+                result['funding_rates'][symbol] = funding_rate
+            
+            result.update({
+            'common_bb_symbols': list(processed_bb_symbols),
+            'common_rsi_symbols': list(processed_rsi_symbols),
+            'intersected_symbols': list(processed_intersected_symbols),
+            'funding_rate': funding_rate})            
         else:
             print("No common Bollinger Band signals found across timeframes.")
-
+        return result
+    
     def analyze_specific_timeframe(self):
         print("Available timeframes: " + ', '.join(self.timeframe_options))
         while True:

@@ -10,7 +10,6 @@ class Exchange:
         self.api_secret = os.getenv('BINANCE_API_SECRET')
         self.exchange = self.connect()
         
-        
     def connect(self):
         exchange = ccxt.binance({
             'apiKey': self.api_key,
@@ -19,6 +18,13 @@ class Exchange:
             'options': {'defaultType': 'future'}
         })
         return exchange
+    
+    def fetch_funding_rate(self, symbol):
+        market = self.exchange.market(symbol)
+        funding_rate = self.exchange.fetch_funding_rate(symbol)['fundingRate']
+        percentage_rate = funding_rate * 100
+        funding_rate = "{:.3f}%".format(percentage_rate)
+        return funding_rate
 
     def fetch_balance(self):
         return self.exchange.fetch_balance()
