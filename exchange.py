@@ -42,11 +42,10 @@ class Exchange:
             if amount > 0:
                 print(f"{asset}: {amount}")
 
-        # 현재 포지션 정보 조회
         print("\nCurrent Positions:")
         positions = balance['info']['positions']
         for position in positions:
-            if float(position['positionAmt']) != 0:  # 열려 있는 포지션만 출력
+            if float(position['positionAmt']) != 0:
                 print(f"Symbol: {position['symbol']}")
                 print(f"  Position Amount: {position['positionAmt']}")
                 print(f"  Entry Price: {position['entryPrice']}")

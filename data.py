@@ -7,10 +7,8 @@ class MarketData:
     @staticmethod
     def fetch_coins_data(exchange, symbols, timeframe, limit):
         coins_data = {}
-        # 모든 시장 데이터 로드
         markets = exchange.load_markets()
         
-        # USDT 마켓에서 거래되는 심볼만 필터링
         usdt_pairs = [symbol for symbol in symbols if symbol.endswith('/USDT:USDT') and symbol in markets]
         
         for symbol in tqdm(usdt_pairs, leave=False):
