@@ -31,6 +31,22 @@ This project requires the following libraries:
   For managing sensitive data using a `.env` file.  
   Install with: `pip install python-dotenv`
 
+- **matplotlib**  
+  For creating visualizations.  
+  Install with: `pip install matplotlib`
+
+- **tqdm**  
+  For displaying progress bars.  
+  Install with: `pip install tqdm`
+
+- **mplfinance**  
+  For financial data plotting.  
+  Install with: `pip install mplfinance`
+
+
+## Creating a requirements.txt File
+
+Create a file named `requirements.txt` in the project's root directory with the following content:
 
 Then, install all dependencies at once with:
 
