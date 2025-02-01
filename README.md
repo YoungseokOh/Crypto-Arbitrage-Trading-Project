@@ -31,9 +31,34 @@ This project requires the following libraries:
   For managing sensitive data using a `.env` file.  
   Install with: `pip install python-dotenv`
 
+- **matplotlib**  
+  For creating visualizations.  
+  Install with: `pip install matplotlib`
+
+- **tqdm**  
+  For displaying progress bars.  
+  Install with: `pip install tqdm`
+
+- **mplfinance**  
+  For financial data plotting.  
+  Install with: `pip install mplfinance`
+
+
+## Creating a requirements.txt File
+
+Create a file named `requirements.txt` in the project's root directory with the following content:
 
 Then, install all dependencies at once with:
 
 ```bash
 pip install -r requirements.txt
+```
 
+## Setting Up Environment Variables
+
+To use `os.getenv` in this project, create a file named `.env` in the project's root directory and add your API keys like so:
+
+```env
+BINANCE_API_KEY=your_actual_api_key_here
+BINANCE_API_SECRET=your_actual_api_secret_here
+```
