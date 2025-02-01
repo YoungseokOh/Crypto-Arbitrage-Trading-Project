@@ -12,6 +12,7 @@ def main():
             'all_timeframes': analysis.analyze_all_timeframes,
             'top_coins': analysis.analyze_top_coins
             }
+
     # 선물 계좌 잔고 조회
     exchange.print_balance()
 

@@ -4,3 +4,6 @@ schedule
 pandas
 numpy
 python-dotenv
+matplotlib
+tqdm
+mplfinance
