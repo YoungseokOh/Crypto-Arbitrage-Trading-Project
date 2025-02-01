@@ -18,8 +18,14 @@ class MarketData:
                 df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
                 coins_data[symbol] = df
             except Exception as e:
-                print(f"Error fetching data for {symbol}: {str(e)}")  # 오류 로깅
+                error_message = str(e)
+                # 에러 메시지에 "-1122" 코드가 포함된 경우 필터링
+                if '"code":-1122' in error_message or "-1122" in error_message:
+                    continue
+                else:
+                    print(f"Error fetching data for {symbol}: {error_message}")
         return coins_data
+
 
     @staticmethod
     def save_data(df, symbol, timeframe):
