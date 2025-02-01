@@ -36,4 +36,13 @@ Then, install all dependencies at once with:
 
 ```bash
 pip install -r requirements.txt
+```
 
+## Setting Up Environment Variables
+
+To use `os.getenv` in this project, create a file named `.env` in the project's root directory and add your API keys like so:
+
+```env
+BINANCE_API_KEY=your_actual_api_key_here
+BINANCE_API_SECRET=your_actual_api_secret_here
+```
